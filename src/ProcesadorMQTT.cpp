@@ -2,6 +2,7 @@
 
 #include "GestorArduino.h"
 #include "GestorMQTT.h"
+#include "PersistenciaEstado.h"
 
 #include <ArduinoJson.h>
 
@@ -303,6 +304,7 @@ void procesarPorton(
 void procesarParedLlorosa(
   const String &mensaje
 ) {
+
   JsonDocument documento;
 
   DeserializationError error =
@@ -312,6 +314,7 @@ void procesarParedLlorosa(
     );
 
   if (error) {
+
     Serial.println(
       "[MQTT] JSON inválido para pared llorosa"
     );
@@ -319,35 +322,67 @@ void procesarParedLlorosa(
     return;
   }
 
-  bool estado =
-    documento["estado"] | false;
+  String accion =
+    documento["accion"] | "";
 
-  String horaEncendido =
-    documento["horaEncendido"] | "";
+  /* ======================================================
+     ENCENDER MANUALMENTE
+     ====================================================== */
 
-  String horaApagado =
-    documento["horaApagado"] | "";
+  if (accion == "encender") {
 
-  estadoCasa.paredLlorosa.encendida =
-    estado;
-
-  estadoCasa.paredLlorosa.horaEncendido =
-    horaEncendido;
-
-  estadoCasa.paredLlorosa.horaApagado =
-    horaApagado;
-
-  if (estado) {
-    GestorArduino
+    ProcesadorMQTT
       ::encenderParedLlorosa();
-  }
-  else {
-    GestorArduino
-      ::apagarParedLlorosa();
+
+    return;
   }
 
-  ProcesadorMQTT
-    ::publicarEstadoCasa();
+  /* ======================================================
+     APAGAR MANUALMENTE
+     ====================================================== */
+
+  if (accion == "apagar") {
+
+    ProcesadorMQTT
+      ::apagarParedLlorosa();
+
+    return;
+  }
+
+  /* ======================================================
+     PROGRAMAR HORARIO
+     ====================================================== */
+
+  if (accion == "programar") {
+
+    String horaEncendido =
+      documento["horaEncendido"] | "";
+
+    String horaApagado =
+      documento["horaApagado"] | "";
+
+    estadoCasa
+      .paredLlorosa
+      .horaEncendido =
+        horaEncendido;
+
+    estadoCasa
+      .paredLlorosa
+      .horaApagado =
+        horaApagado;
+
+    ProcesadorMQTT::publicarEstadoCasa();
+
+    Serial.println(
+      "[HORARIO] Horario actualizado"
+    );
+
+    return;
+  }
+
+  Serial.println(
+    "[MQTT] Accion invalida para pared llorosa"
+  );
 }
 
 /* ==========================================================
@@ -423,6 +458,11 @@ void procesarMensaje(
 }
 
 void publicarEstadoCasa() {
+  PersistenciaEstado
+  ::guardarEstado(
+    estadoCasa
+  );
+
   JsonDocument documento;
 
   JsonObject luces =
@@ -530,4 +570,182 @@ EstadoCasa obtenerEstadoCasa() {
   return estadoCasa;
 }
 
+bool restaurarEstadoGuardado() {
+
+  EstadoCasa estadoGuardado;
+
+  bool cargado =
+    PersistenciaEstado
+      ::cargarEstado(
+        estadoGuardado
+      );
+
+  if (!cargado) {
+    Serial.println(
+      "[ESTADO] No existe estado guardado"
+    );
+
+    return false;
+  }
+
+  estadoCasa = estadoGuardado;
+
+  Serial.println(
+    "[ESTADO] Restaurando estado..."
+  );
+
+  auto aplicarLuz = [](
+    const String &habitacion,
+    const EstadoLuz &luz
+  ) {
+
+    int pwm = 0;
+
+    if (luz.encendida) {
+      pwm = map(
+        constrain(
+          luz.brillo,
+          0,
+          100
+        ),
+        0,
+        100,
+        0,
+        255
+      );
+    }
+
+    GestorArduino::actualizarLuz(
+      habitacion,
+      pwm
+    );
+  };
+
+  aplicarLuz(
+    "ENTRADA",
+    estadoCasa.entrada
+  );
+
+  aplicarLuz(
+    "CALLE",
+    estadoCasa.calle
+  );
+
+  aplicarLuz(
+    "PORTON",
+    estadoCasa.porton
+  );
+
+  aplicarLuz(
+    "COCINA",
+    estadoCasa.cocina
+  );
+
+  aplicarLuz(
+    "SALA",
+    estadoCasa.sala
+  );
+
+  aplicarLuz(
+    "JARDIN",
+    estadoCasa.jardin
+  );
+
+  aplicarLuz(
+    "PASILLO",
+    estadoCasa.pasillo
+  );
+
+  aplicarLuz(
+    "CUARTO",
+    estadoCasa.cuarto
+  );
+
+  aplicarLuz(
+    "BANO",
+    estadoCasa.bano
+  );
+
+  if (
+    estadoCasa
+      .paredLlorosa
+      .encendida
+  ) {
+
+    GestorArduino
+      ::encenderParedLlorosa();
+
+  } else {
+
+    GestorArduino
+      ::apagarParedLlorosa();
+  }
+
+  // if (
+  //   estadoCasa
+  //     .portonAbierto
+  // ) {
+
+  //   GestorArduino
+  //     ::abrirPorton();
+
+  // } else {
+
+  //   GestorArduino
+  //     ::cerrarPorton();
+  // }
+
+  Serial.println(
+    "[ESTADO] Estado restaurado correctamente"
+  );
+
+  return true;
+}
+void encenderParedLlorosa() {
+
+  if (
+    estadoCasa
+      .paredLlorosa
+      .encendida
+  ) {
+    return;
+  }
+
+  estadoCasa
+    .paredLlorosa
+    .encendida = true;
+
+  GestorArduino
+    ::encenderParedLlorosa();
+
+  publicarEstadoCasa();
+
+  Serial.println(
+    "[HORARIO] Pared llorosa encendida automaticamente"
+  );
+}
+
+void apagarParedLlorosa() {
+
+  if (
+    !estadoCasa
+      .paredLlorosa
+      .encendida
+  ) {
+    return;
+  }
+
+  estadoCasa
+    .paredLlorosa
+    .encendida = false;
+
+  GestorArduino
+    ::apagarParedLlorosa();
+
+  publicarEstadoCasa();
+
+  Serial.println(
+    "[HORARIO] Pared llorosa apagada automaticamente"
+  );
+}
 }

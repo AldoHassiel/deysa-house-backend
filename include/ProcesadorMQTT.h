@@ -37,4 +37,8 @@ namespace ProcesadorMQTT {
   );
   void publicarEstadoCasa();
   EstadoCasa obtenerEstadoCasa();
+  bool restaurarEstadoGuardado();
+  void encenderParedLlorosa();
+
+  void apagarParedLlorosa();
 }

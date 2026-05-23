@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <LittleFS.h>
 
 #include "Almacenamiento.h"
 #include "GestorArduino.h"
@@ -6,6 +7,7 @@
 #include "GestorMQTT.h"
 #include "GestorWiFi.h"
 #include "ProcesadorMQTT.h"
+#include "GestorHorario.h"
 
 void alRecibirMensajeMQTT(const String &topico, const String &mensaje) {
   Serial.println("[MQTT]: Mensaje recibido");
@@ -21,12 +23,24 @@ void setup() {
   
   Serial.println("[DeysaHouse]: Empezando setup...");
 
+  if (!LittleFS.begin()) {
+    Serial.println(
+      "[DeysaHouse]: Error iniciando LittleFS"
+    );
+
+    return;
+  }
+
+
   Almacenamiento::iniciar();
   GestorArduino::iniciar();
   GestorBluetooth::iniciar();
   GestorMQTT::iniciar(alRecibirMensajeMQTT);
+  GestorHorario::iniciar();
 
   ProcesadorMQTT::iniciar();
+
+  ProcesadorMQTT::restaurarEstadoGuardado();
 
   String ssid;
   String contrasena;
@@ -125,4 +139,5 @@ void loop() {
   }
 
   GestorMQTT::actualizar();
+  GestorHorario::actualizar();
 }
