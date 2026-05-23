@@ -9,7 +9,7 @@ namespace GestorWifi {
     );
 
     bool estaConectado();
-
+    void actualizar();
     String obtenerDireccionIP();
 
     void desconectar();

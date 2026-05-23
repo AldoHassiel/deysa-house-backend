@@ -2,6 +2,14 @@
 
 #include <ESP8266WiFi.h>
 
+String ssidGuardado = "";
+String contrasenaGuardada = "";
+
+unsigned long ultimoIntentoReconexion = 0;
+
+const unsigned long
+INTERVALO_RECONEXION_WIFI_MS = 10000;
+
 const unsigned long TIEMPO_MAXIMO_ESPERA_CONEXION_MS = 15000;
 const unsigned long INTERVALO_VERIFICACION_MS = 500;
 
@@ -9,6 +17,9 @@ namespace GestorWifi{
     bool conectar(const String &ssid, const String &contrasena){
         Serial.println();
         Serial.println("[Wifi]: Inciando conexion...");
+
+        ssidGuardado = ssid;
+        contrasenaGuardada = contrasena;
 
         WiFi.mode(WIFI_STA);
         WiFi.begin(ssid.c_str(), contrasena.c_str());
@@ -51,4 +62,35 @@ namespace GestorWifi{
 
         Serial.println("[Wifi]: Desconectado");
     }
+    void actualizar(){
+
+    if(estaConectado()){
+        return;
+    }
+
+    if(ssidGuardado.length() == 0){
+        return;
+    }
+
+    unsigned long tiempoActual = millis();
+
+    if(
+        tiempoActual - ultimoIntentoReconexion <
+        INTERVALO_RECONEXION_WIFI_MS
+    ){
+        return;
+    }
+
+    ultimoIntentoReconexion =
+        tiempoActual;
+
+    Serial.println(
+        "[WIFI] Intentando reconexion..."
+    );
+
+    conectar(
+        ssidGuardado,
+        contrasenaGuardada
+    );
+}
 }

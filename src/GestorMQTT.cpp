@@ -1,5 +1,6 @@
 #include "GestorMQTT.h"
 #include "Configuracion.h"
+#include "ProcesadorMQTT.h"
 
 #include <ESP8266WiFi.h>
 #include <WiFiClientSecure.h>
@@ -24,6 +25,29 @@ void callbackInterno(char *topico, byte *payload, unsigned int longitud){
     }
 
     callbackUsuario(String(topico), mensaje);
+}
+
+void suscribirseTopicos() {
+
+    clienteMQTT.subscribe(
+        "casa/luces"
+    );
+
+    clienteMQTT.subscribe(
+        "casa/porton"
+    );
+
+    clienteMQTT.subscribe(
+        "casa/pared-llorosa"
+    );
+
+    clienteMQTT.subscribe(
+        "casa/estado/obtener"
+    );
+
+    Serial.println(
+        "[MQTT] Topicos suscritos"
+    );
 }
 
 namespace GestorMQTT {
@@ -65,6 +89,8 @@ namespace GestorMQTT {
         }
 
         Serial.println("[MQTT]: Conectado correctamente");
+        suscribirseTopicos();
+        ProcesadorMQTT::publicarEstadoCasa();
         return true;
     }
 
