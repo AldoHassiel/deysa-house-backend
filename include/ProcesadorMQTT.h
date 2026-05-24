@@ -31,6 +31,7 @@ struct EstadoCasa {
 
 namespace ProcesadorMQTT {
   void iniciar();
+  void actualizar();
   void procesarMensaje(
     const String &topico,
     const String &mensaje

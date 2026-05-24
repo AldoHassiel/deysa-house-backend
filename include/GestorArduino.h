@@ -4,6 +4,7 @@
 
 namespace GestorArduino {
   void iniciar();
+  void actualizar();
   void actualizarLuz(
     const String &habitacion,
     int brillo

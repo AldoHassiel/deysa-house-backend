@@ -9,6 +9,8 @@
 #include "ProcesadorMQTT.h"
 #include "GestorHorario.h"
 #include "PersistenciaEstado.h"
+#include "GestorLED.h"
+
 #include <ESP8266WiFi.h>
 
 void alRecibirMensajeMQTT(
@@ -40,6 +42,8 @@ void setup() {
   Serial.begin(9600);
 
   delay(1000);
+
+  GestorLED::iniciar();
 
   Serial.println(
     "[DeysaHouse]: Empezando setup..."
@@ -122,9 +126,12 @@ void setup() {
 }
 
 void loop() {
-
+  GestorLED::actualizar();
+  
   GestorBluetooth::actualizar();
 
+  GestorArduino::actualizar();
+  
   if (
   GestorBluetooth
     ::haySolicitudReinicioFabrica()
@@ -168,6 +175,22 @@ void loop() {
     );
 
     if (
+      Almacenamiento
+        ::guardarCredencialesWifi(
+          configuracion.ssid,
+          configuracion.contrasena
+        )
+    ) {
+      Serial.println(
+        "[DeysaHouse]: Credenciales guardadas para intento de conexion"
+      );
+    } else {
+      Serial.println(
+        "[DeysaHouse]: Error al guardar credenciales"
+      );
+    }
+
+    if (
       !GestorWifi::conectar(
         configuracion.ssid,
         configuracion.contrasena
@@ -178,29 +201,12 @@ void loop() {
         "[DeysaHouse]: No fue posible conectarse al wifi"
       );
 
+      Almacenamiento::borrarCredencialesWifi();
+
       GestorBluetooth
         ::limpiarConfiguracionWifi();
 
       return;
-    }
-
-    if (
-      Almacenamiento
-        ::guardarCredencialesWifi(
-          configuracion.ssid,
-          configuracion.contrasena
-        )
-    ) {
-
-      Serial.println(
-        "[DeysaHouse]: Credenciales guardadas correctamente"
-      );
-
-    } else {
-
-      Serial.println(
-        "[DeysaHouse] Error al guardar credenciales"
-      );
     }
 
     GestorMQTT::conectar();
@@ -214,4 +220,6 @@ void loop() {
   GestorMQTT::actualizar();
 
   GestorHorario::actualizar();
+
+  ProcesadorMQTT::actualizar();
 }

@@ -1,6 +1,7 @@
 #include "GestorWiFi.h"
 
 #include <ESP8266WiFi.h>
+#include "GestorLED.h"
 
 String ssidGuardado = "";
 String contrasenaGuardada = "";
@@ -11,7 +12,7 @@ const unsigned long
 INTERVALO_RECONEXION_WIFI_MS = 10000;
 
 const unsigned long TIEMPO_MAXIMO_ESPERA_CONEXION_MS = 15000;
-const unsigned long INTERVALO_VERIFICACION_MS = 500;
+const unsigned long INTERVALO_VERIFICACION_MS = 50;
 
 namespace GestorWifi{
     bool conectar(const String &ssid, const String &contrasena){
@@ -30,6 +31,7 @@ namespace GestorWifi{
             WiFi.status() != WL_CONNECTED && 
             millis() - tiempoInicio < TIEMPO_MAXIMO_ESPERA_CONEXION_MS
         ){
+            GestorLED::actualizar();
             delay(INTERVALO_VERIFICACION_MS);
             Serial.print(".");
         }

@@ -31,9 +31,40 @@ const String TOPICO_ESTADO =
 
 EstadoCasa estadoCasa;
 
+
+/* ==========================================================
+   CONTROL DE BOMBA (ANTI-RUIDO)
+   ========================================================== */
+unsigned long tiempoArranqueBomba = 0;
+bool pendienteRestaurarLuces = false;
+const unsigned long TIEMPO_ESPERA_BOMBA_MS = 1000; // 1 segundo de espera
+
+void restaurarSoloLuces() {
+  Serial.println("[ESTADO] Restaurando luces tras arranque de bomba...");
+
+  auto aplicarLuz = [](const String &habitacion, const EstadoLuz &luz) {
+    int pwm = 0;
+    if (luz.encendida) {
+      pwm = map(constrain(luz.brillo, 0, 100), 0, 100, 0, 255);
+    }
+    GestorArduino::actualizarLuz(habitacion, pwm);
+  };
+
+  aplicarLuz("ENTRADA", estadoCasa.entrada);
+  aplicarLuz("CALLE", estadoCasa.calle);
+  aplicarLuz("PORTON", estadoCasa.porton);
+  aplicarLuz("COCINA", estadoCasa.cocina);
+  aplicarLuz("SALA", estadoCasa.sala);
+  aplicarLuz("JARDIN", estadoCasa.jardin);
+  aplicarLuz("PASILLO", estadoCasa.pasillo);
+  aplicarLuz("CUARTO", estadoCasa.cuarto);
+  aplicarLuz("BANO", estadoCasa.bano);
+}
+
 /* ==========================================================
    DECLARACIONES ADELANTADAS
    ========================================================== */
+
 
 namespace ProcesadorMQTT {
   void publicarEstadoCasa();
@@ -720,6 +751,9 @@ void encenderParedLlorosa() {
 
   publicarEstadoCasa();
 
+  tiempoArranqueBomba = millis();
+  pendienteRestaurarLuces = true;
+
   Serial.println(
     "[HORARIO] Pared llorosa encendida automaticamente"
   );
@@ -748,4 +782,13 @@ void apagarParedLlorosa() {
     "[HORARIO] Pared llorosa apagada automaticamente"
   );
 }
+
+void actualizar() {
+  // Si tenemos luces pendientes por restaurar y ya pasó 1 segundo
+  if (pendienteRestaurarLuces && (millis() - tiempoArranqueBomba >= TIEMPO_ESPERA_BOMBA_MS)) {
+    restaurarSoloLuces();
+    pendienteRestaurarLuces = false; // Apagar la bandera
+  }
+}
+
 }
