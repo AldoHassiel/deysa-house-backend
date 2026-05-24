@@ -179,7 +179,6 @@ String convertirHabitacionArduino(
 /* ==========================================================
    PROCESAMIENTO DE LUCES
    ========================================================== */
-
 void procesarLuces(
   const String &mensaje
 ) {
@@ -195,84 +194,90 @@ void procesarLuces(
     Serial.println(
       "[MQTT] JSON inválido para luces"
     );
-
     return;
   }
 
-  String habitacion =
-    documento["habitacion"] | "";
-
-  bool estado =
-    documento["estado"] | false;
-
-  int brillo =
-    documento["brillo"] | 100;
+  String habitacion = documento["habitacion"] | "";
+  bool estado = documento["estado"] | false;
+  
+  // Verificamos si la app incluyó explícitamente el campo "brillo"
+  bool appEnvioBrillo = documento.containsKey("brillo");
+  int brilloRecibido = documento["brillo"] | 100;
 
   if (habitacion.length() == 0) {
-    Serial.println(
-      "[MQTT] Habitación inválida"
-    );
-
+    Serial.println("[MQTT] Habitación inválida");
     return;
   }
 
-  EstadoLuz *luz =
-    obtenerLuzPorHabitacion(
-      habitacion
-    );
+  /* ======================================================
+     INTERRUPTOR MAESTRO (TODAS LAS LUCES)
+     ====================================================== */
+  if (habitacion == "todas") {
+    
+    // Mini-función interna (Lambda) para procesar cada luz sin repetir código
+    auto aplicarLuzGlobal = [&](EstadoLuz &luz, const String &nombreArduino) {
+      luz.encendida = estado;
+
+      if (!estado) {
+        // Apagamos físicamente, pero NO borramos su memoria de brillo
+        GestorArduino::actualizarLuz(nombreArduino, 0);
+      } else {
+        // Encendemos
+        if (appEnvioBrillo) {
+          luz.brillo = constrain(brilloRecibido, 0, 100);
+        } else if (luz.brillo == 0) {
+          luz.brillo = 100; // Respaldo por si nunca había sido encendida
+        }
+        
+        int pwm = convertirBrilloMQTTaPWM(luz.brillo);
+        GestorArduino::actualizarLuz(nombreArduino, pwm);
+      }
+    };
+
+    // Aplicamos la lógica a todas las luces
+    aplicarLuzGlobal(estadoCasa.entrada, "ENTRADA");
+    aplicarLuzGlobal(estadoCasa.calle, "CALLE");
+    aplicarLuzGlobal(estadoCasa.porton, "PORTON");
+    aplicarLuzGlobal(estadoCasa.cocina, "COCINA");
+    aplicarLuzGlobal(estadoCasa.sala, "SALA");
+    aplicarLuzGlobal(estadoCasa.jardin, "JARDIN");
+    aplicarLuzGlobal(estadoCasa.pasillo, "PASILLO");
+    aplicarLuzGlobal(estadoCasa.cuarto, "CUARTO");
+    aplicarLuzGlobal(estadoCasa.bano, "BANO");
+
+    ProcesadorMQTT::publicarEstadoCasa();
+    Serial.println("[MQTT] Interruptor maestro: Casa entera actualizada");
+    return;
+  }
+
+  /* ======================================================
+     PROCESAMIENTO NORMAL (UNA SOLA HABITACIÓN)
+     ====================================================== */
+  EstadoLuz *luz = obtenerLuzPorHabitacion(habitacion);
 
   if (luz == nullptr) {
-    Serial.println(
-      "[MQTT] Habitación no encontrada"
-    );
-
+    Serial.println("[MQTT] Habitación no encontrada");
     return;
   }
+
+  luz->encendida = estado;
 
   if (!estado) {
-    luz->encendida = false;
-    luz->brillo = 0;
+    // Apagamos físicamente, pero NO borramos su memoria de brillo
+    GestorArduino::actualizarLuz(convertirHabitacionArduino(habitacion), 0);
+  } else {
+    // Encendemos
+    if (appEnvioBrillo) {
+      luz->brillo = constrain(brilloRecibido, 0, 100);
+    } else if (luz->brillo == 0) {
+      luz->brillo = 100;
+    }
 
-    GestorArduino::actualizarLuz(
-      convertirHabitacionArduino(
-        habitacion
-      ),
-      0
-    );
-
-    ProcesadorMQTT
-      ::publicarEstadoCasa();
-
-    return;
+    int pwm = convertirBrilloMQTTaPWM(luz->brillo);
+    GestorArduino::actualizarLuz(convertirHabitacionArduino(habitacion), pwm);
   }
 
-  if (brillo == 0) {
-    brillo = 100;
-  }
-
-  brillo = constrain(
-    brillo,
-    0,
-    100
-  );
-
-  luz->encendida = true;
-  luz->brillo = brillo;
-
-  int pwm =
-    convertirBrilloMQTTaPWM(
-      brillo
-    );
-
-  GestorArduino::actualizarLuz(
-    convertirHabitacionArduino(
-      habitacion
-    ),
-    pwm
-  );
-
-  ProcesadorMQTT
-    ::publicarEstadoCasa();
+  ProcesadorMQTT::publicarEstadoCasa();
 }
 
 /* ==========================================================
