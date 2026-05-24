@@ -12,6 +12,30 @@ CallbackMensajeMQTT callbackUsuario = nullptr;
 unsigned long ultimoIntentoConexion = 0;
 const unsigned long INTERVALO_RECONEXION_MS = 5000;
 
+void publicarEstadoDispositivo(
+    bool online
+) {
+
+    String payload;
+
+    if (online) {
+
+        payload =
+            R"({"online":true})";
+
+    } else {
+
+        payload =
+            R"({"online":false})";
+    }
+
+    clienteMQTT.publish(
+        TOPICO_DISPOSITIVO,
+        payload.c_str(),
+        true
+    );
+}
+
 void callbackInterno(char *topico, byte *payload, unsigned int longitud){
     if(callbackUsuario == nullptr){
         return;
@@ -75,10 +99,15 @@ namespace GestorMQTT {
 
         Serial.println("[MQTT]: Conectando al broker...");
 
-        bool conectado = clienteMQTT.connect(
+        bool conectado =
+            clienteMQTT.connect(
             MQTT_ID_CLIENTE,
             MQTT_USUARIO,
-            MQTT_CONTRASENA
+            MQTT_CONTRASENA,
+            TOPICO_DISPOSITIVO,
+            1,
+            true,
+            R"({"online":false})"
         );
 
         if(!conectado){
@@ -89,8 +118,16 @@ namespace GestorMQTT {
         }
 
         Serial.println("[MQTT]: Conectado correctamente");
+
+        publicarEstadoDispositivo(
+            true
+        );
+
         suscribirseTopicos();
-        ProcesadorMQTT::publicarEstadoCasa();
+
+        ProcesadorMQTT
+            ::publicarEstadoCasa();
+
         return true;
     }
 

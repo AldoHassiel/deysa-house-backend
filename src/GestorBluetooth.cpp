@@ -1,4 +1,8 @@
 #include "GestorBluetooth.h"
+#include "GestorWiFi.h"
+#include "GestorMQTT.h"
+
+#include <ESP8266WiFi.h>
 
 #include <ArduinoJson.h>
 
@@ -72,6 +76,13 @@ namespace GestorBluetooth {
             /* =========================================
             CONFIGURACION WIFI
             ========================================= */
+            if(tipo == "estado"){
+    enviarEstadoSistema();
+
+    bufferRecepcion = "";
+
+    continue;
+}
 
             if (
             tipo != "wifi_config"
@@ -128,5 +139,62 @@ void limpiarSolicitudReinicioFabrica() {
 
   reinicioFabricaSolicitado =
     false;
+}
+
+void enviarEstadoConexion(
+    bool wifiConectado,
+    const String &ssid,
+    bool mqttConectado
+) {
+
+    JsonDocument documento;
+
+    documento["type"] =
+        "wifi_status";
+
+    documento["success"] =
+        wifiConectado;
+
+    documento["ssid"] =
+        ssid;
+
+    documento["mqtt"] =
+        mqttConectado;
+
+    serializeJson(
+        documento,
+        Serial
+    );
+
+    Serial.println();
+}
+void enviarEstadoSistema(){
+
+    JsonDocument documento;
+
+    documento["wifiConectado"] =
+        GestorWifi::estaConectado();
+
+    documento["mqttConectado"] =
+        GestorMQTT::estaConectado();
+
+    documento["ssid"] =
+        WiFi.SSID();
+
+    documento["ip"] =
+        WiFi.localIP().toString();
+
+    documento["disponible"] =
+        GestorWifi::estaConectado() &&
+        GestorMQTT::estaConectado();
+
+    String respuesta;
+
+    serializeJson(
+        documento,
+        respuesta
+    );
+
+    Serial.println(respuesta);
 }
 }

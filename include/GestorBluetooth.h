@@ -16,4 +16,6 @@ namespace GestorBluetooth{
     void limpiarConfiguracionWifi();
     bool haySolicitudReinicioFabrica();
     void limpiarSolicitudReinicioFabrica();
+    void enviarEstadoConexion(bool wifiConectado,const String &ssid,bool mqttConectado);
+    void enviarEstadoSistema();
 }
