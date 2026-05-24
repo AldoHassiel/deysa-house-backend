@@ -242,4 +242,35 @@ bool cargarEstado(
   return true;
 }
 
+bool borrarEstado() {
+
+  if (
+    !LittleFS.exists(
+      RUTA_ESTADO
+    )
+  ) {
+
+    return true;
+  }
+
+  bool eliminado =
+    LittleFS.remove(
+      RUTA_ESTADO
+    );
+
+  if (!eliminado) {
+
+    Serial.println(
+      "[PERSISTENCIA] Error borrando estado"
+    );
+
+    return false;
+  }
+
+  Serial.println(
+    "[PERSISTENCIA] Estado eliminado correctamente"
+  );
+
+  return true;
+}
 }

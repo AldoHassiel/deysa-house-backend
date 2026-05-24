@@ -14,4 +14,6 @@ namespace GestorBluetooth{
     bool hayConfiguracionWifiDisponible();
     ConfiguracionWiFiRecibida obtenerConfiguracionWifiRecibida();
     void limpiarConfiguracionWifi();
+    bool haySolicitudReinicioFabrica();
+    void limpiarSolicitudReinicioFabrica();
 }

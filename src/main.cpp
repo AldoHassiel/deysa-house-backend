@@ -8,6 +8,8 @@
 #include "GestorWiFi.h"
 #include "ProcesadorMQTT.h"
 #include "GestorHorario.h"
+#include "PersistenciaEstado.h"
+#include <ESP8266WiFi.h>
 
 void alRecibirMensajeMQTT(
   const String &topico,
@@ -122,6 +124,35 @@ void setup() {
 void loop() {
 
   GestorBluetooth::actualizar();
+
+  if (
+  GestorBluetooth
+    ::haySolicitudReinicioFabrica()
+) {
+
+  Serial.println(
+    "[SISTEMA] Reiniciando de fabrica..."
+  );
+
+  PersistenciaEstado
+    ::borrarEstado();
+
+  Almacenamiento
+    ::borrarCredencialesWifi();
+
+  GestorWifi
+    ::desconectar();
+
+  delay(1000);
+
+  Serial.println(
+    "[SISTEMA] Reiniciando ESP..."
+  );
+
+  ESP.restart();
+
+  return;
+}
 
   if (
     GestorBluetooth

@@ -6,10 +6,13 @@ String bufferRecepcion;
 bool configuracionDisponible = false;
 ConfiguracionWiFiRecibida configuracionWiFi;
 
+bool reinicioFabricaSolicitado = false;
+
 namespace GestorBluetooth {
     void iniciar(){
         bufferRecepcion = "";
         configuracionDisponible = false;
+
     }
 
     void actualizar(){
@@ -50,8 +53,33 @@ namespace GestorBluetooth {
 
             String tipo = documento["type"] | "";
 
-            if(tipo != "wifi_config"){
-                continue;
+            if (
+            tipo == "factory_reset"
+            ) {
+
+            reinicioFabricaSolicitado =
+                true;
+
+            Serial.println(
+                "[Bluetooth] Reinicio de fabrica solicitado"
+            );
+
+            bufferRecepcion = "";
+
+            continue;
+            }
+
+            /* =========================================
+            CONFIGURACION WIFI
+            ========================================= */
+
+            if (
+            tipo != "wifi_config"
+            ) {
+
+            bufferRecepcion = "";
+
+            continue;
             }
 
             String ssid = documento["ssid"] | "";
@@ -90,4 +118,15 @@ namespace GestorBluetooth {
         configuracionWiFi.contrasena = "";
         configuracionDisponible = false;
     }
+
+    bool haySolicitudReinicioFabrica() {
+
+  return reinicioFabricaSolicitado;
+}
+
+void limpiarSolicitudReinicioFabrica() {
+
+  reinicioFabricaSolicitado =
+    false;
+}
 }

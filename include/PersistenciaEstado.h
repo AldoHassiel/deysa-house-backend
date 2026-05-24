@@ -14,4 +14,5 @@ bool cargarEstado(
   EstadoCasa &estado
 );
 
+bool borrarEstado();
 }
