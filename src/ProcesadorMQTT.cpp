@@ -754,6 +754,8 @@ void encenderParedLlorosa() {
   GestorArduino
     ::encenderParedLlorosa();
 
+  GestorArduino::detenerPorton();
+
   publicarEstadoCasa();
 
   tiempoArranqueBomba = millis();

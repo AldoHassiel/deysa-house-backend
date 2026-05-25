@@ -13,4 +13,5 @@ namespace GestorArduino {
   void cerrarPorton();
   void encenderParedLlorosa();
   void apagarParedLlorosa();
+  void detenerPorton();
 }

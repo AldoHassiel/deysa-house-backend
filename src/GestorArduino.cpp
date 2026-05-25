@@ -107,4 +107,7 @@ namespace GestorArduino {
     );
     }
 
+  void detenerPorton() {
+    enviarComando("PORTON:DETENER");
+  }
 }
