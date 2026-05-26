@@ -397,21 +397,25 @@ void procesarParedLlorosa(
     String horaApagado =
       documento["horaApagado"] | "";
 
-    estadoCasa
-      .paredLlorosa
-      .horaEncendido =
-        horaEncendido;
-
-    estadoCasa
-      .paredLlorosa
-      .horaApagado =
-        horaApagado;
+    // Nueva lógica: si ambas horas son "00:00", lo interpretamos como "borrar"
+    if (horaEncendido == "00:00" && horaApagado == "00:00") {
+      estadoCasa.paredLlorosa.horaEncendido = "";
+      estadoCasa.paredLlorosa.horaApagado = "";
+      
+      Serial.println(
+        "[HORARIO] Programacion eliminada. Horario automatico desactivado."
+      );
+    } 
+    else {
+      estadoCasa.paredLlorosa.horaEncendido = horaEncendido;
+      estadoCasa.paredLlorosa.horaApagado = horaApagado;
+      
+      Serial.println(
+        "[HORARIO] Horario actualizado: " + horaEncendido + " a " + horaApagado
+      );
+    }
 
     ProcesadorMQTT::publicarEstadoCasa();
-
-    Serial.println(
-      "[HORARIO] Horario actualizado"
-    );
 
     return;
   }
