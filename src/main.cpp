@@ -126,100 +126,42 @@ void setup() {
 }
 
 void loop() {
-  GestorLED::actualizar();
-  
-  GestorBluetooth::actualizar();
-
-  GestorArduino::actualizar();
-  
-  if (
-  GestorBluetooth
-    ::haySolicitudReinicioFabrica()
-) {
-
-  Serial.println(
-    "[SISTEMA] Reiniciando de fabrica..."
-  );
-
-  PersistenciaEstado
-    ::borrarEstado();
-
-  Almacenamiento
-    ::borrarCredencialesWifi();
-
-  GestorWifi
-    ::desconectar();
-
-  delay(1000);
-
-  Serial.println(
-    "[SISTEMA] Reiniciando ESP..."
-  );
-
-  ESP.restart();
-
-  return;
-}
-
-  if (
-    GestorBluetooth
-      ::hayConfiguracionWifiDisponible()
-  ) {
-
-    ConfiguracionWiFiRecibida configuracion =
-      GestorBluetooth
-        ::obtenerConfiguracionWifiRecibida();
-
-    Serial.println(
-      "[DeysaHouse]: Configuracion wifi recibida"
-    );
-
-    if (
-      Almacenamiento
-        ::guardarCredencialesWifi(
-          configuracion.ssid,
-          configuracion.contrasena
-        )
-    ) {
-      Serial.println(
-        "[DeysaHouse]: Credenciales guardadas para intento de conexion"
-      );
-    } else {
-      Serial.println(
-        "[DeysaHouse]: Error al guardar credenciales"
-      );
+    GestorLED::actualizar();
+    GestorBluetooth::actualizar();
+    GestorArduino::actualizar();
+    
+    if (GestorBluetooth::haySolicitudReinicioFabrica()) {
+        Serial.println("[SISTEMA] Reiniciando de fabrica...");
+        PersistenciaEstado::borrarEstado();
+        Almacenamiento::borrarCredencialesWifi();
+        GestorWifi::desconectar();
+        delay(1000);
+        ESP.restart();
+        return;
     }
 
-    if (
-      !GestorWifi::conectar(
-        configuracion.ssid,
-        configuracion.contrasena
-      )
-    ) {
+    if (GestorBluetooth::hayConfiguracionWifiDisponible()) {
+        
+        ConfiguracionWiFiRecibida conf = GestorBluetooth::obtenerConfiguracionWifiRecibida();
+        Serial.println("[DeysaHouse]: Iniciando prueba de red WiFi nueva...");
 
-      Serial.println(
-        "[DeysaHouse]: No fue posible conectarse al wifi"
-      );
+        bool conexionExitosa = GestorWifi::conectar(conf.ssid, conf.contrasena);
 
-      Almacenamiento::borrarCredencialesWifi();
+        GestorBluetooth::enviarRespuestaPruebaWiFi(conexionExitosa, conf.ssid);
 
-      GestorBluetooth
-        ::limpiarConfiguracionWifi();
+        if (conexionExitosa) {
+            Serial.println("[DeysaHouse]: Guardando nuevas credenciales validas.");
+            Almacenamiento::guardarCredencialesWifi(conf.ssid, conf.contrasena);
+            GestorMQTT::conectar();
+        } else {
+            Serial.println("[DeysaHouse]: Prueba fallida. Descartando credenciales.");
+        }
 
-      return;
+        GestorBluetooth::limpiarConfiguracionWifi();
     }
 
-    GestorMQTT::conectar();
-
-    GestorBluetooth
-      ::limpiarConfiguracionWifi();
-  }
-
-  GestorWifi::actualizar();
-
-  GestorMQTT::actualizar();
-
-  GestorHorario::actualizar();
-
-  ProcesadorMQTT::actualizar();
+    GestorWifi::actualizar();
+    GestorMQTT::actualizar();
+    GestorHorario::actualizar();
+    ProcesadorMQTT::actualizar();
 }
